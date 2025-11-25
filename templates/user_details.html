@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Детали пользователя: {{ target_user.username }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-user"></i> Детали пользователя</h2>
+                    <small class="text-muted">Время показано по Беларуси (UTC+3)</small>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Назад к списку
+                    </a>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Основная информация</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">ID:</th>
+                                    <td><span class="badge bg-secondary">{{ target_user.id }}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Имя пользователя:</th>
+                                    <td><strong>{{ target_user.username }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Email:</th>
+                                    <td>{{ target_user.email }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Статус:</th>
+                                    <td>
+                                        {% if target_user.is_active %}
+                                            <span class="badge bg-success">Активен</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Заблокирован</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Роль:</th>
+                                    <td>
+                                        {% if target_user.username == 'admin' %}
+                                            <span class="badge bg-danger">Администратор</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">Пользователь</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Дата регистрации:</th>
+                                    <td>{{ target_user.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Интересы:</h6>
+                            {% if target_user.interests %}
+                                {% set interests_list = target_user.interests|from_json %}
+                                {% if interests_list %}
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for interest in interests_list %}
+                                            <span class="badge bg-info">{{ interest }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted">Интересы не указаны</p>
+                                {% endif %}
+                            {% else %}
+                                <p class="text-muted">Интересы не указаны</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4 g-3">
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Отзывов</h6>
+                                    <h3 class="mb-0">{{ reviews_count }}</h3>
+                                </div>
+                                <div>
+                                    <i class="fas fa-star fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Сохраненных событий</h6>
+                                    <h3 class="mb-0">{{ saved_events_count }}</h3>
+                                </div>
+                                <div>
+                                    <i class="fas fa-bookmark fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Записей в логах</h6>
+                                    <h3 class="mb-0">{{ logs_count }}</h3>
+                                </div>
+                                <div>
+                                    <i class="fas fa-list-alt fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-star"></i> Последние отзывы</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_reviews %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Событие</th>
+                                        <th>Рейтинг</th>
+                                        <th>Комментарий</th>
+                                        <th>Дата</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for review in recent_reviews %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('event_detail', event_id=review.event_id) }}">
+                                                {{ review.event.title }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {% for i in range(5) %}
+                                                {% if i < review.rating %}
+                                                    <i class="fas fa-star text-warning"></i>
+                                                {% else %}
+                                                    <i class="far fa-star text-muted"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% if review.comment %}
+                                                {{ review.comment[:50] }}{% if review.comment|length > 50 %}...{% endif %}
+                                            {% else %}
+                                                <span class="text-muted">Без комментария</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ review.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">Пользователь еще не оставлял отзывов</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-bookmark"></i> Последние сохраненные события</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_saved_events %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Событие</th>
+                                        <th>Дата события</th>
+                                        <th>Сохранено</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for saved in recent_saved_events %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('event_detail', event_id=saved.event_id) }}">
+                                                {{ saved.event.title }}
+                                            </a>
+                                        </td>
+                                        <td>{{ saved.event.date.strftime('%d.%m.%Y') }} в {{ saved.event.time.strftime('%H:%M') }}</td>
+                                        <td>{{ saved.saved_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">Пользователь еще не сохранял события</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+

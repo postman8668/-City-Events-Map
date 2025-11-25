@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event.title }} - Карта событий города{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">{{ event.title }}</h1>
+                
+                <div class="mb-3">
+                    <span class="badge bg-primary me-2">{{ event.category }}</span>
+                    {% if event.price > 0 %}
+                    <span class="badge price-badge">{{ event.price }} BYN</span>
+                    {% else %}
+                    <span class="badge free-badge">Бесплатно</span>
+                    {% endif %}
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-calendar me-2"></i>Дата и время</h5>
+                        <p>{{ event.date.strftime('%d.%m.%Y') }} в {{ event.time.strftime('%H:%M') }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-map-marker-alt me-2"></i>Место проведения</h5>
+                        <p>{{ event.location }}</p>
+                    </div>
+                </div>
+                
+                <h5>Описание</h5>
+                <p class="card-text">{{ event.description }}</p>
+                
+                <div class="mb-3">
+                    <h5>Интересы</h5>
+                    {% for interest in event.interests|from_json %}
+                    <span class="interest-tag">{{ interest }}</span>
+                    {% endfor %}
+                </div>
+                
+                {% if event.max_participants %}
+                <div class="mb-3">
+                    <h5>Участники</h5>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: {{ event.participants_percentage }}%">
+                            {{ event.participants_count }} / {{ event.max_participants }}
+                        </div>
+                    </div>
+                    <small class="text-muted">{{ event.participants_percentage|round(1) }}% заполнено</small>
+                </div>
+                {% endif %}
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                    <button class="btn btn-success" onclick="saveEvent({{ event.id }})">
+                        <i class="fas fa-bookmark me-1"></i>Сохранить событие
+                    </button>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-1"></i>Назад к списку
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-star me-2"></i>Отзывы
+                    {% if reviews %}
+                    <span class="badge bg-primary ms-2">{{ reviews|length }}</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if reviews %}
+                    {% for review in reviews %}
+                    <div class="border-bottom pb-3 mb-3" id="review-{{ review.id }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ review.user.username }}</h6>
+                                <div class="rating-stars" id="rating-display-{{ review.id }}">
+                                    {% for i in range(5) %}
+                                        {% if i < review.rating %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted d-block">{{ review.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                {% if session.user_id and (review.user_id == session.user_id or session.username == 'admin') %}
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editReview({{ review.id }}, {{ review.rating }}, '{{ review.comment|replace("'", "\\'")|replace('"', '\\"') }}')" title="Редактировать">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteReview({{ review.id }})" title="Удалить">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div id="comment-display-{{ review.id }}">
+                            {% if review.comment %}
+                            <p class="mt-2 mb-0">{{ review.comment }}</p>
+                            {% endif %}
+                        </div>
+                        <div id="edit-form-{{ review.id }}" style="display: none;" class="mt-3">
+                            <form onsubmit="saveReviewEdit({{ review.id }}); return false;">
+                                <div class="mb-2">
+                                    <label class="form-label">Оценка</label>
+                                    <select class="form-select form-select-sm" id="edit-rating-{{ review.id }}" required>
+                                        <option value="1" {% if review.rating == 1 %}selected{% endif %}>1</option>
+                                        <option value="2" {% if review.rating == 2 %}selected{% endif %}>2</option>
+                                        <option value="3" {% if review.rating == 3 %}selected{% endif %}>3</option>
+                                        <option value="4" {% if review.rating == 4 %}selected{% endif %}>4</option>
+                                        <option value="5" {% if review.rating == 5 %}selected{% endif %}>5</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Комментарий</label>
+                                    <textarea class="form-control form-control-sm" id="edit-comment-{{ review.id }}" rows="2">{{ review.comment }}</textarea>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary">Сохранить</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelEdit({{ review.id }})">Отмена</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Пока нет отзывов. Будьте первым!</p>
+                {% endif %}
+                
+                {% if session.user_id %}
+                <div class="mt-4">
+                    <h6>Оставить отзыв</h6>
+                    <form id="reviewForm">
+                        <div class="mb-3">
+                            <label for="rating" class="form-label">Оценка</label>
+                            <select class="form-select" id="rating" required>
+                                <option value="">Выберите оценку</option>
+                                <option value="5">5 - Отлично</option>
+                                <option value="4">4 - Хорошо</option>
+                                <option value="3">3 - Удовлетворительно</option>
+                                <option value="2">2 - Плохо</option>
+                                <option value="1">1 - Очень плохо</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Комментарий</label>
+                            <textarea class="form-control" id="comment" rows="3" placeholder="Ваш отзыв о событии..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-1"></i>Отправить отзыв
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Для оставления отзыва необходимо <a href="{{ url_for('login') }}">войти в систему</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Информация о событии
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6>Дата создания</h6>
+                        <p class="text-muted">{{ event.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                    </div>
+                    {% if event.price > 0 %}
+                    <div class="col-12">
+                        <h6>Стоимость</h6>
+                        <p class="text-muted">{{ event.price }} BYN</p>
+                    </div>
+                    {% endif %}
+                    {% if event.max_participants %}
+                    <div class="col-12">
+                        <h6>Максимум участников</h6>
+                        <p class="text-muted">{{ event.max_participants }} человек</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('reviewForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const rating = document.getElementById('rating').value;
+        const comment = document.getElementById('comment').value;
+        
+        if (!rating) {
+            alert('Пожалуйста, выберите оценку');
+            return;
+        }
+        
+        fetch('/add_review', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: {{ event.id }},
+                rating: parseInt(rating),
+                comment: comment
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при отправке отзыва');
+        });
+    });
+    
+    function saveEvent(eventId) {
+        {% if not session.user_id %}
+        alert('Для сохранения событий необходимо войти в систему');
+        window.location.href = '{{ url_for("login") }}';
+        return;
+        {% endif %}
+        
+        fetch('/save_event', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при сохранении события');
+        });
+    }
+    
+    function editReview(reviewId, currentRating, currentComment) {
+        document.getElementById('comment-display-' + reviewId).style.display = 'none';
+        document.getElementById('edit-form-' + reviewId).style.display = 'block';
+    }
+    
+    function cancelEdit(reviewId) {
+        document.getElementById('comment-display-' + reviewId).style.display = 'block';
+        document.getElementById('edit-form-' + reviewId).style.display = 'none';
+        location.reload();
+    }
+    
+    function saveReviewEdit(reviewId) {
+        const rating = document.getElementById('edit-rating-' + reviewId).value;
+        const comment = document.getElementById('edit-comment-' + reviewId).value;
+        
+        fetch('/review/' + reviewId + '/edit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                rating: parseInt(rating),
+                comment: comment
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при обновлении отзыва');
+        });
+    }
+    
+    function deleteReview(reviewId) {
+        if (!confirm('Вы уверены, что хотите удалить этот отзыв?')) {
+            return;
+        }
+        
+        fetch('/review/' + reviewId + '/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                document.getElementById('review-' + reviewId).remove();
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при удалении отзыва');
+        });
+    }
+</script>
+{% endblock %}

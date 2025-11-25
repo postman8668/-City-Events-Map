@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - Карта событий города{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <h1 class="mb-4">
+            <i class="fas fa-calendar-alt text-primary me-2"></i>
+            События Полоцка и Новополоцка
+        </h1>
+        
+        <div class="filter-section">
+            <h5><i class="fas fa-filter me-2"></i>Фильтры и поиск</h5>
+            <div class="row g-3">
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <label for="searchInput" class="form-label">Поиск:</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Название, описание">
+                </div>
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <label for="categoryFilter" class="form-label">Категория:</label>
+                    <select class="form-select" id="categoryFilter">
+                        <option value="all">Все категории</option>
+                        {% for category in categories %}
+                        <option value="{{ category }}">{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <label for="interestFilter" class="form-label">Интерес:</label>
+                    <select class="form-select" id="interestFilter">
+                        <option value="">Все интересы</option>
+                        <option value="классическая музыка">Классическая музыка</option>
+                        <option value="рок">Рок</option>
+                        <option value="программирование">Программирование</option>
+                        <option value="йога">Йога</option>
+                        <option value="футбол">Футбол</option>
+                        <option value="теннис">Теннис</option>
+                        <option value="велосипед">Велосипед</option>
+                        <option value="еда">Еда</option>
+                        <option value="кулинария">Кулинария</option>
+                        <option value="искусство">Искусство</option>
+                        <option value="живопись">Живопись</option>
+                        <option value="фотография">Фотография</option>
+                        <option value="культура">Культура</option>
+                        <option value="история">История</option>
+                        <option value="технологии">Технологии</option>
+                        <option value="спорт">Спорт</option>
+                        <option value="здоровье">Здоровье</option>
+                        <option value="природа">Природа</option>
+                        <option value="активный отдых">Активный отдых</option>
+                        <option value="развлечения">Развлечения</option>
+                        <option value="молодежь">Молодежь</option>
+                        <option value="концерт">Концерт</option>
+                        <option value="лекция">Лекция</option>
+                        <option value="обучение">Обучение</option>
+                        <option value="творчество">Творчество</option>
+                        <option value="традиции">Традиции</option>
+                        <option value="соревнования">Соревнования</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <button class="btn btn-primary" onclick="applyFilters()">
+                            <i class="fas fa-search me-1"></i>Применить фильтры
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-container mb-4">
+            <div id="map"></div>
+        </div>
+        
+        <div id="eventsList">
+            {% for event in events %}
+            <div class="card event-card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="card-title">
+                                <a href="/event/{{ event.id }}" class="text-decoration-none">
+                                    {{ event.title }}
+                                </a>
+                            </h5>
+                            <p class="card-text">{{ event.description[:150] }}{% if event.description|length > 150 %}...{% endif %}</p>
+                            
+                            <div class="mb-2">
+                                <span class="badge bg-primary category-badge me-2">{{ event.category }}</span>
+                                {% if event.price > 0 %}
+                                <span class="badge price-badge">{{ event.price }} BYN</span>
+                                {% else %}
+                                <span class="badge free-badge">Бесплатно</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="text-muted small">
+                                <i class="fas fa-calendar me-1"></i>{{ event.date.strftime('%d.%m.%Y') }}
+                                <i class="fas fa-clock ms-3 me-1"></i>{{ event.time.strftime('%H:%M') }}
+                                <i class="fas fa-map-marker-alt ms-3 me-1"></i>{{ event.location }}
+                            </div>
+                            
+                            <div class="mt-2">
+                                {% for interest in event.interests|from_json %}
+                                <span class="interest-tag">{{ interest }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="d-grid gap-2">
+                                <a href="/event/{{ event.id }}" class="btn btn-outline-primary">
+                                    <i class="fas fa-info-circle me-1"></i>Подробнее
+                                </a>
+                                <button class="btn btn-outline-success" onclick="saveEvent({{ event.id }})">
+                                    <i class="fas fa-bookmark me-1"></i>Сохранить
+                                </button>
+                                <button class="btn btn-outline-info btn-sm mt-1" onclick="showSavedEvents()">
+                                    <i class="fas fa-list me-1"></i>Мои события
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Информация
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    На этой карте отображаются все события Полоцка и Новополоцка. 
+                    Используйте фильтры для поиска интересующих вас мероприятий.
+                </p>
+                <hr>
+                <h6>Как пользоваться:</h6>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i>Кликните по маркеру на карте</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Используйте фильтры для поиска</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Сохраняйте понравившиеся события</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Оставляйте отзывы</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let map;
+    let markers = [];
+    const initialEvents = {{ events_json | tojson }};
+
+    function initMap() {
+        console.log('Initializing map...');
+        const mapElement = document.getElementById('map');
+        if (!mapElement) {
+            console.error('Map element not found!');
+            return;
+        }
+        
+        map = L.map('map').setView([55.515, 28.700], 11);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        console.log('Map initialized successfully');
+        if (Array.isArray(initialEvents) && initialEvents.length > 0) {
+            updateMap(initialEvents);
+            updateEventsList(initialEvents);
+        }
+        loadEvents();
+    }
+
+    function loadEvents() {
+        const category = document.getElementById('categoryFilter').value;
+        const interest = document.getElementById('interestFilter').value;
+        const search = document.getElementById('searchInput').value;
+        
+        let url = '/api/events?';
+        if (category !== 'all') url += `category=${category}&`;
+        if (interest) url += `interest=${interest}&`;
+        if (search) url += `search=${encodeURIComponent(search)}&`;
+        
+        console.log('Loading events from:', url);
+        
+        fetch(url)
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(events => {
+                console.log('Loaded events:', events.length);
+                console.log('Events data:', events);
+                
+                if (!Array.isArray(events)) {
+                    console.error('Events is not an array:', events);
+                    return;
+                }
+                
+                events.forEach((event, index) => {
+                    console.log(`Event ${index + 1}:`, {
+                        title: event.title,
+                        latitude: event.latitude,
+                        longitude: event.longitude,
+                        latType: typeof event.latitude,
+                        lngType: typeof event.longitude
+                    });
+                });
+                
+                const hasActiveSearch = search && search.trim() !== '';
+                
+                if (events.length === 0 && hasActiveSearch) {
+                    updateMap([]);
+                    updateEventsList([], true);
+                } else if (events.length === 0 && !hasActiveSearch && Array.isArray(initialEvents) && initialEvents.length > 0) {
+                    console.warn('API вернуло пусто, используем initialEvents');
+                    updateMap(initialEvents);
+                    updateEventsList(initialEvents);
+                } else {
+                    updateMap(events);
+                    updateEventsList(events);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading events:', error);
+                const eventsList = document.getElementById('eventsList');
+                if (eventsList) {
+                    eventsList.innerHTML = `
+                        <div class="alert alert-warning" role="alert">
+                            <h4 class="alert-heading">Ошибка загрузки событий</h4>
+                            <p>Не удалось загрузить события. Попробуйте обновить страницу.</p>
+                            <hr>
+                            <p class="mb-0">Ошибка: ${error.message}</p>
+                        </div>
+                    `;
+                }
+            });
+    }
+
+    function updateMap(events) {
+        console.log('Updating map with', events.length, 'events');
+        
+        if (!map) {
+            console.error('Map not initialized!');
+            return;
+        }
+        
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+        
+        events.forEach(event => {
+            const lat = parseFloat(event.latitude);
+            const lng = parseFloat(event.longitude);
+            console.log('Adding marker for event:', event.title, 'at', lat, lng);
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                console.error('Invalid coordinates for event:', event.title, event.latitude, event.longitude);
+                return;
+            }
+
+            const marker = L.marker([lat, lng])
+                .bindPopup(`
+                    <div>
+                        <h6>${event.title}</h6>
+                        <p>${event.description.substring(0, 100)}...</p>
+                        <p><strong>Дата:</strong> ${event.date} в ${event.time}</p>
+                        <p><strong>Место:</strong> ${event.location}</p>
+                        <a href="/event/${event.id}" class="btn btn-sm btn-primary">Подробнее</a>
+                    </div>
+                `)
+                .addTo(map);
+            markers.push(marker);
+        });
+        
+        if (events.length > 0 && markers.length > 0) {
+            const group = new L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.1));
+            console.log('Map bounds updated with', markers.length, 'markers');
+        } else {
+            console.log('No markers to fit bounds. Events:', events.length, 'Markers:', markers.length);
+        }
+    }
+
+    function updateEventsList(events, showNoResults = false) {
+        const eventsList = document.getElementById('eventsList');
+        eventsList.innerHTML = '';
+        
+        if (showNoResults && events.length === 0) {
+            eventsList.innerHTML = `
+                <div class="alert alert-info" role="alert">
+                    <h4 class="alert-heading">
+                        <i class="fas fa-search me-2"></i>Ничего не найдено
+                    </h4>
+                    <p>По вашему запросу не найдено ни одного события. Попробуйте изменить параметры поиска.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        if (events.length === 0) {
+            return;
+        }
+        
+        events.forEach(event => {
+            const eventCard = createEventCard(event);
+            eventsList.appendChild(eventCard);
+        });
+    }
+
+    function createEventCard(event) {
+        const div = document.createElement('div');
+        div.className = 'card event-card';
+        
+        const interests = JSON.parse(event.interests);
+        const interestsHtml = interests.map(interest => 
+            `<span class="interest-tag">${interest}</span>`
+        ).join('');
+        
+        const priceBadge = event.price > 0 ? 
+            `<span class="badge price-badge">${event.price} BYN</span>` :
+            `<span class="badge free-badge">Бесплатно</span>`;
+        
+        div.innerHTML = `
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5 class="card-title">
+                            <a href="/event/${event.id}" class="text-decoration-none">
+                                ${event.title}
+                            </a>
+                        </h5>
+                        <p class="card-text">${event.description.substring(0, 150)}${event.description.length > 150 ? '...' : ''}</p>
+                        
+                        <div class="mb-2">
+                            <span class="badge bg-primary category-badge me-2">${event.category}</span>
+                            ${priceBadge}
+                        </div>
+                        
+                        <div class="text-muted small">
+                            <i class="fas fa-calendar me-1"></i>${event.date}
+                            <i class="fas fa-clock ms-3 me-1"></i>${event.time}
+                            <i class="fas fa-map-marker-alt ms-3 me-1"></i>${event.location}
+                        </div>
+                        
+                        <div class="mt-2">
+                            ${interestsHtml}
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="d-grid gap-2">
+                            <a href="/event/${event.id}" class="btn btn-outline-primary">
+                                <i class="fas fa-info-circle me-1"></i>Подробнее
+                            </a>
+                            <button class="btn btn-outline-success" onclick="saveEvent(${event.id})">
+                                <i class="fas fa-bookmark me-1"></i>Сохранить
+                            </button>
+                            <button class="btn btn-outline-info btn-sm mt-1" onclick="showSavedEvents()">
+                                <i class="fas fa-list me-1"></i>Мои события
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return div;
+    }
+
+    function applyFilters() {
+        loadEvents();
+    }
+
+    function saveEvent(eventId) {
+        {% if not session.user_id %}
+        alert('Для сохранения событий необходимо войти в систему');
+        window.location.href = '{{ url_for("login") }}';
+        return;
+        {% endif %}
+        
+        fetch('/save_event', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId
+            })
+        })
+        .then(response => {
+            if (response.status === 401) {
+                alert('Для сохранения событий необходимо войти в систему');
+                window.location.href = '{{ url_for("login") }}';
+                return;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.success) {
+                alert(data.message);
+            } else if (data) {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при сохранении события');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, initializing...');
+        initMap();
+        
+        const categoryFilter = document.getElementById('categoryFilter');
+        const interestFilter = document.getElementById('interestFilter');
+        const searchInput = document.getElementById('searchInput');
+        
+        if (categoryFilter) {
+            categoryFilter.addEventListener('change', function() {
+                console.log('Category filter changed to:', this.value);
+                loadEvents();
+            });
+        }
+        
+        if (interestFilter) {
+            interestFilter.addEventListener('change', function() {
+                console.log('Interest filter changed to:', this.value);
+                loadEvents();
+            });
+        }
+        
+        if (searchInput) {
+            let searchTimeout;
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    console.log('Search input changed to:', this.value);
+                    loadEvents();
+                }, 500);
+            });
+        }
+    });
+</script>
+{% endblock %}

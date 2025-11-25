@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-user me-2"></i>Профиль пользователя
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Основная информация</h5>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Имя пользователя:</strong></td>
+                                <td>{{ user.username }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Email:</strong></td>
+                                <td>{{ user.email }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Дата регистрации:</strong></td>
+                                <td>{{ user.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Статистика</h5>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Сохраненных событий:</strong></td>
+                                <td>{{ user.saved_events|length }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Оставленных отзывов:</strong></td>
+                                <td>{{ user.reviews|length }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                    <a href="{{ url_for('saved_events', username=user.username) }}" class="btn btn-primary">
+                        <i class="fas fa-bookmark me-1"></i>Мои события
+                    </a>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-1"></i>На главную
+                    </a>
+                    {% if user.username != 'admin' %}
+                    <button class="btn btn-outline-danger" onclick="deleteAccount()">
+                        <i class="fas fa-trash me-1"></i>Удалить аккаунт
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function deleteAccount() {
+        if (!confirm('ВНИМАНИЕ! Вы уверены, что хотите удалить свой аккаунт?\n\nЭто действие удалит:\n- Ваш аккаунт\n- Все ваши отзывы\n- Все ваши сохраненные события\n\nЭто действие нельзя отменить!')) {
+            return;
+        }
+        
+        if (!confirm('Это последнее предупреждение. Вы действительно хотите удалить свой аккаунт?')) {
+            return;
+        }
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ url_for("delete_own_account") }}';
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+{% endblock %}
